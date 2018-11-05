@@ -21,6 +21,8 @@ import io.confluent.examples.streams.kafka.EmbeddedSingleNodeKafkaCluster
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization._
+import org.apache.kafka.streams.kstream.internals.{AbstractStream, InternalStreamsBuilder}
+import org.apache.kafka.streams.processor.internals.InternalTopologyBuilder
 import org.apache.kafka.streams.scala.StreamsBuilder
 import org.apache.kafka.streams.scala.kstream.{KStream, KTable}
 import org.apache.kafka.streams.{KafkaStreams, KeyValue, StreamsConfig}
@@ -152,7 +154,17 @@ class StreamToTableJoinScalaIntegrationTest extends AssertionsForJUnit {
       .reduce(_ + _)
 
     // Write the (continuously updating) results to the output topic.
+
+
     clicksPerRegion.toStream.to(outputTopic)
+    val f = classOf[AbstractStream[String]].getDeclaredField("builder"); //NoSuchFieldException
+    f.setAccessible(true);
+    val inPrBldr: InternalStreamsBuilder =  f.get(clicksPerRegion.inner).asInstanceOf[InternalStreamsBuilder]
+    val f2 = classOf[InternalStreamsBuilder].getDeclaredField("internalTopologyBuilder")
+    f2.setAccessible(true)
+    val topBldr: InternalTopologyBuilder = f2.get(inPrBldr).asInstanceOf[InternalTopologyBuilder]
+    val dsc = topBldr.describe()
+    println(dsc)
 
     val streams: KafkaStreams = new KafkaStreams(builder.build(), streamsConfiguration)
     streams.start()
